@@ -1,6 +1,8 @@
 """Shared visual components for the redesigned research platform."""
 
+import base64
 from html import escape
+from pathlib import Path
 
 import streamlit as st
 
@@ -33,8 +35,48 @@ PLOT_META = {
 }
 
 
+def _embedded_font_css():
+    """Embed the open Arial-compatible font so cloud browsers have a stable fallback."""
+    font_dir = Path(__file__).resolve().parent / "fonts"
+    regular_path = font_dir / "Arimo-Variable.ttf"
+    italic_path = font_dir / "Arimo-Italic-Variable.ttf"
+    if not regular_path.exists():
+        return ""
+
+    regular_data = base64.b64encode(regular_path.read_bytes()).decode("ascii")
+    font_faces = [
+        f"""
+        @font-face {{
+            font-family: "Arial Cloud";
+            src: url(data:font/ttf;base64,{regular_data}) format("truetype");
+            font-style: normal;
+            font-weight: 400 700;
+            font-display: swap;
+        }}
+        """
+    ]
+    if italic_path.exists():
+        italic_data = base64.b64encode(italic_path.read_bytes()).decode("ascii")
+        font_faces.append(
+            f"""
+            @font-face {{
+                font-family: "Arial Cloud";
+                src: url(data:font/ttf;base64,{italic_data}) format("truetype");
+                font-style: italic;
+                font-weight: 400 700;
+                font-display: swap;
+            }}
+            """
+        )
+    return "\n".join(font_faces)
+
+
 def inject_platform_css():
     """Apply the platform theme without changing any plotting code."""
+    font_css = _embedded_font_css()
+    if font_css:
+        st.markdown(f"<style>{font_css}</style>", unsafe_allow_html=True)
+
     st.markdown(
         """
         <style>
@@ -49,9 +91,25 @@ def inject_platform_css():
             --lab-coral: #D9684F;
         }
 
-        html, body, [class*="css"] {
-            font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+        html, body, .stApp {
+            font-family: Arial, "Arial Cloud", sans-serif !important;
             color: var(--lab-ink);
+        }
+
+        .stApp h1,
+        .stApp h2,
+        .stApp h3,
+        .stApp p,
+        .stApp li,
+        .stApp label,
+        .stApp input,
+        .stApp textarea,
+        .stApp button,
+        .stApp [data-testid="stCaptionContainer"],
+        .stApp [data-testid="stMetricLabel"],
+        .stApp [data-testid="stMetricValue"],
+        .stApp [data-baseweb="select"] {
+            font-family: Arial, "Arial Cloud", sans-serif !important;
         }
 
         .stApp {
@@ -271,7 +329,7 @@ def inject_platform_css():
         .lab-brand__signal span:nth-child(5) { height: 5px; animation-delay: 400ms; }
 
         .lab-brand__name {
-            font-family: "Bahnschrift", "Arial", sans-serif;
+            font-family: Arial, "Arial Cloud", sans-serif;
             color: #FFFFFF;
             font-size: 1.22rem;
             font-weight: 760;
@@ -279,7 +337,7 @@ def inject_platform_css():
 
         .lab-brand__caption {
             color: #91A5AB;
-            font-family: "Consolas", monospace;
+            font-family: Arial, "Arial Cloud", sans-serif;
             font-size: 0.72rem;
             margin-top: 0.4rem;
         }
@@ -287,7 +345,7 @@ def inject_platform_css():
         .lab-side-section {
             margin: 1.3rem 0 0.55rem;
             color: #8FA3A9;
-            font-family: "Consolas", monospace;
+            font-family: Arial, "Arial Cloud", sans-serif;
             font-size: 0.72rem;
             font-weight: 700;
             text-transform: uppercase;
@@ -304,7 +362,7 @@ def inject_platform_css():
         }
 
         .lab-page-head__code {
-            font-family: "Consolas", monospace;
+            font-family: Arial, "Arial Cloud", sans-serif;
             color: var(--page-accent);
             font-size: 0.78rem;
             font-weight: 800;
@@ -328,7 +386,7 @@ def inject_platform_css():
             padding: 0.75rem 0 0.2rem;
             border-top: 3px solid var(--page-accent);
             text-align: right;
-            font-family: "Consolas", monospace;
+            font-family: Arial, "Arial Cloud", sans-serif;
             color: #4E6067;
             font-size: 0.76rem;
             line-height: 1.6;
@@ -340,7 +398,7 @@ def inject_platform_css():
             gap: 0.75rem;
             margin: 1.55rem 0 0.75rem;
             color: #41535A;
-            font-family: "Consolas", monospace;
+            font-family: Arial, "Arial Cloud", sans-serif;
             font-size: 0.78rem;
             font-weight: 800;
             text-transform: uppercase;

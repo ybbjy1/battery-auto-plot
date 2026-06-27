@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import streamlit as st
+from matplotlib import font_manager
+from matplotlib.text import Text
 
 import Cycling_plot as cycling
 import Nyquist_plot as nyquist
@@ -27,6 +29,7 @@ STANDARD_FIGURE_HEIGHT_CM = 16
 AXIS_TITLE_SIZE = 24
 TICK_AND_LEGEND_SIZE = 20
 AXIS_TITLE_PAD = 4
+FONT_DIR = Path(__file__).resolve().parent / "fonts"
 LEGEND_LOCATIONS = {
     "左上": "upper left",
     "右上": "upper right",
@@ -37,6 +40,29 @@ LEGEND_LOCATIONS = {
     "顶部居中": "upper center",
     "底部居中": "lower center",
 }
+
+
+def _register_cloud_plot_font():
+    """Register the bundled Arial-compatible font for Linux-based Streamlit Cloud."""
+    font_paths = [
+        FONT_DIR / "Arimo-Regular.ttf",
+        FONT_DIR / "Arimo-Bold.ttf",
+        FONT_DIR / "Arimo-RegularItalic.ttf",
+        FONT_DIR / "Arimo-BoldItalic.ttf",
+    ]
+    registered = False
+    for font_path in font_paths:
+        if not font_path.exists():
+            continue
+        try:
+            font_manager.fontManager.addfont(str(font_path))
+            registered = True
+        except (OSError, RuntimeError):
+            continue
+    return "Arimo" if registered else "DejaVu Sans"
+
+
+PLOT_FONT_FAMILY = _register_cloud_plot_font()
 
 
 def _as_bytes(buffer):
@@ -66,38 +92,48 @@ def _standardize_figure_canvas(fig):
     )
 
 
+def _apply_cloud_plot_font(fig):
+    """Replace unavailable Arial references before previewing or exporting a figure."""
+    for text in fig.findobj(match=Text):
+        text.set_fontfamily(PLOT_FONT_FAMILY)
+    plt.rcParams["font.family"] = PLOT_FONT_FAMILY
+    plt.rcParams["mathtext.rm"] = PLOT_FONT_FAMILY
+    plt.rcParams["mathtext.it"] = f"{PLOT_FONT_FAMILY}:italic"
+    plt.rcParams["mathtext.bf"] = f"{PLOT_FONT_FAMILY}:bold"
+
+
 def _standardize_arrhenius_typography(fig):
     """Match Arrhenius labels, ticks, and annotations to the Nyquist typography."""
     if not fig.axes:
         return
 
     main_ax = fig.axes[0]
-    main_ax.xaxis.label.set_fontfamily("Arial")
+    main_ax.xaxis.label.set_fontfamily(PLOT_FONT_FAMILY)
     main_ax.xaxis.label.set_fontsize(AXIS_TITLE_SIZE)
     main_ax.xaxis.label.set_fontweight("bold")
     main_ax.xaxis.labelpad = AXIS_TITLE_PAD
-    main_ax.yaxis.label.set_fontfamily("Arial")
+    main_ax.yaxis.label.set_fontfamily(PLOT_FONT_FAMILY)
     main_ax.yaxis.label.set_fontsize(AXIS_TITLE_SIZE)
     main_ax.yaxis.label.set_fontweight("bold")
     main_ax.yaxis.labelpad = AXIS_TITLE_PAD
 
     for label in main_ax.get_xticklabels() + main_ax.get_yticklabels():
-        label.set_fontfamily("Arial")
+        label.set_fontfamily(PLOT_FONT_FAMILY)
         label.set_fontsize(TICK_AND_LEGEND_SIZE)
         label.set_fontweight("bold")
     for text in main_ax.texts:
-        text.set_fontfamily("Arial")
+        text.set_fontfamily(PLOT_FONT_FAMILY)
         text.set_fontsize(TICK_AND_LEGEND_SIZE)
         text.set_fontweight("bold")
 
     if len(fig.axes) > 1:
         top_ax = fig.axes[1]
-        top_ax.xaxis.label.set_fontfamily("Arial")
+        top_ax.xaxis.label.set_fontfamily(PLOT_FONT_FAMILY)
         top_ax.xaxis.label.set_fontsize(AXIS_TITLE_SIZE)
         top_ax.xaxis.label.set_fontweight("bold")
         top_ax.xaxis.labelpad = AXIS_TITLE_PAD
         for label in top_ax.get_xticklabels():
-            label.set_fontfamily("Arial")
+            label.set_fontfamily(PLOT_FONT_FAMILY)
             label.set_fontsize(TICK_AND_LEGEND_SIZE)
             label.set_fontweight("bold")
 
@@ -406,6 +442,7 @@ def render_nyquist_page():
             legend_loc=LEGEND_LOCATIONS[legend_label],
         )
         _standardize_figure_canvas(fig)
+        _apply_cloud_plot_font(fig)
         preview = _white_preview(fig)
         _render_downloads(fig, "nyquist_plot")
         _render_workspace(preview, plot_df, series_count)
@@ -638,6 +675,7 @@ def render_arrhenius_page():
         )
         _standardize_figure_canvas(fig)
         _standardize_arrhenius_typography(fig)
+        _apply_cloud_plot_font(fig)
         preview = _white_preview(fig)
         _render_downloads(fig, "arrhenius_plot")
         source_df = raw_df if raw_df is not None else plot_df
@@ -752,6 +790,7 @@ def render_rate_page():
     try:
         fig = rate.create_rate_figure(plot_df, legend_labels, legend_x, legend_y, annotations)
         _standardize_figure_canvas(fig)
+        _apply_cloud_plot_font(fig)
         preview = _white_preview(fig)
         _render_downloads(fig, "rate_capability_plot")
         series_count = int(plot_df["_series"].nunique())
@@ -898,6 +937,7 @@ def render_cycling_page():
             annotations,
             plot_width_cm,
         )
+        _apply_cloud_plot_font(fig)
         preview = cycling.figure_to_white_preview_bytes(fig)
         _render_downloads(fig, "cycling_performance_plot")
         series_count = int(plot_df["_series"].nunique())
